@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PocketVPN</string>
+    <string name="tagline">free, no ads, no servers</string>
+
+    <string name="state_disconnected">Tap to connect</string>
+    <string name="state_connecting">Building circuit…</string>
+    <string name="state_connected">Protected</string>
+    <string name="state_error">Connection failed</string>
+
+    <string name="region_auto">Auto</string>
+    <string name="region_picker_title">Choose region</string>
+    <string name="region_preset_fast_eu">Fast Europe</string>
+    <string name="region_preset_any">Any country</string>
+    <string name="region_preset_avoid_14eyes">Outside 14-eyes</string>
+
+    <string name="drawer_kill_switch">Kill switch</string>
+    <string name="drawer_auto_connect">Auto-connect on untrusted Wi-Fi</string>
+    <string name="drawer_conflux">Conflux (multi-path)</string>
+    <string name="drawer_persistent">Keep circuits warm</string>
+    <string name="drawer_bridge_mode">Be a bridge for censored users</string>
+    <string name="drawer_bridge_wifi_only">Only over Wi-Fi</string>
+    <string name="drawer_bridge_battery_guard">Pause below 30% battery</string>
+    <string name="drawer_about">About</string>
+
+    <string name="notif_channel_tor">Tor circuit</string>
+    <string name="notif_channel_vpn">VPN tunnel</string>
+    <string name="notif_vpn_active">PocketVPN active</string>
+    <string name="notif_vpn_connecting">Connecting…</string>
+</resources>
