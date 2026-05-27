@@ -2,13 +2,11 @@ package com.musornibak.pocketvpn.ui.drawer
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -30,11 +28,6 @@ import com.musornibak.pocketvpn.ui.main.VpnViewModel
 fun AppDrawer(vm: VpnViewModel) {
     val killSwitch by vm.killSwitch.collectAsState(initial = false)
     val autoConnect by vm.autoConnect.collectAsState(initial = false)
-    val conflux by vm.conflux.collectAsState(initial = true)
-    val persistent by vm.persistent.collectAsState(initial = true)
-    val bridge by vm.bridgeMode.collectAsState(initial = false)
-    val bridgeWifi by vm.bridgeWifiOnly.collectAsState(initial = true)
-    val bridgeBattery by vm.bridgeBatteryGuard.collectAsState(initial = true)
 
     Column(
         modifier = Modifier
@@ -49,7 +42,7 @@ fun AppDrawer(vm: VpnViewModel) {
             fontSize = 20.sp
         )
         Text(
-            "free · no ads · no servers",
+            "free · no ads · no account",
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp,
@@ -58,32 +51,31 @@ fun AppDrawer(vm: VpnViewModel) {
 
         Spacer(modifier = Modifier.height(20.dp))
         Section("Protection")
-        ToggleRow("Kill switch", "Block all traffic if Tor drops", killSwitch, vm::setKillSwitch)
-        ToggleRow("Auto-connect on untrusted Wi-Fi", "Public hotspots, cafe Wi-Fi", autoConnect, vm::setAutoConnect)
-
-        Spacer(modifier = Modifier.height(12.dp))
-        Section("Speed")
-        ToggleRow("Conflux (multi-path)", "Split traffic across 2 circuits (~2× faster)", conflux, vm::setConflux)
-        ToggleRow("Keep circuits warm", "Lower latency on new connections", persistent, vm::setPersistent)
-
-        Spacer(modifier = Modifier.height(12.dp))
-        Section("Bridge mode")
-        Text(
-            "Let your phone help users behind firewalls. Anonymous, low-impact, runs in the background.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+        ToggleRow(
+            "Kill switch",
+            "Block all traffic if VPN drops",
+            killSwitch,
+            vm::setKillSwitch
         )
-        ToggleRow("Be a bridge", "Snowflake proxy for censored users", bridge, vm::setBridge)
-        ToggleRow("Only over Wi-Fi", "Don't use cellular data", bridgeWifi, vm::setBridgeWifiOnly)
-        ToggleRow("Pause below 30% battery", "Auto-stop on low charge", bridgeBattery, vm::setBridgeBatteryGuard)
+        ToggleRow(
+            "Auto-connect on untrusted Wi-Fi",
+            "Public hotspots, café Wi-Fi",
+            autoConnect,
+            vm::setAutoConnect
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            "v0.1.0 · built on Tor",
+            "v0.2.0 · WireGuard + Cloudflare WARP",
             modifier = Modifier.padding(horizontal = 24.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 11.sp
+        )
+        Text(
+            "anonymous registration, no email · ~50 Mbps typical",
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp
         )

@@ -13,8 +13,8 @@ android {
         applicationId = "com.musornibak.pocketvpn"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
@@ -71,6 +71,9 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
+
+    implementation(libs.wireguard.tunnel)
+    implementation(libs.okhttp)
 
     debugImplementation(libs.androidx.ui.tooling)
 }

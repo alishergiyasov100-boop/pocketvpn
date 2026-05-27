@@ -1,0 +1,86 @@
+package com.musornibak.pocketvpn.vpn
+
+import android.content.Context
+import com.musornibak.pocketvpn.data.VpnState
+import com.wireguard.android.backend.GoBackend
+import com.wireguard.android.backend.Tunnel
+import com.wireguard.config.Config
+import com.wireguard.config.Interface
+import com.wireguard.config.Peer
+import com.wireguard.crypto.Key
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+/**
+ * Owns the wireguard-go tunnel. Ensures an anonymous Cloudflare WARP account
+ * exists, then brings the tunnel UP/DOWN through GoBackend.
+ */
+class WarpEngine(private val context: Context) {
+
+    private val backend = GoBackend(context.applicationContext)
+    private val store = WarpStore(context.applicationContext)
+    private val client = WarpClient()
+
+    private val _state = MutableStateFlow(VpnState.Disconnected)
+    val state: StateFlow<VpnState> = _state.asStateFlow()
+
+    private val tunnel = object : Tunnel {
+        override fun getName() = "pocketvpn"
+        override fun onStateChange(newState: Tunnel.State) {
+            _state.value = when (newState) {
+                Tunnel.State.UP -> VpnState.Connected
+                Tunnel.State.DOWN -> VpnState.Disconnected
+                Tunnel.State.TOGGLE -> VpnState.Connecting
+            }
+        }
+    }
+
+    private var cachedConfig: Config? = null
+
+    /** Throws on failure; caller (ViewModel) handles UI Error state. */
+    suspend fun connect() {
+        _state.value = VpnState.Connecting
+        val account = ensureAccount()
+        val config = cachedConfig ?: buildConfig(account).also { cachedConfig = it }
+        // GoBackend.setState performs a JNI handshake that may block briefly.
+        withContext(Dispatchers.IO) {
+            backend.setState(tunnel, Tunnel.State.UP, config)
+        }
+        _state.value = VpnState.Connected
+    }
+
+    fun disconnect() {
+        runCatching { backend.setState(tunnel, Tunnel.State.DOWN, null) }
+        _state.value = VpnState.Disconnected
+    }
+
+    private suspend fun ensureAccount(): WarpAccount =
+        store.load() ?: client.register().also {
+            store.save(it)
+            runCatching { client.enableWarp(it) }
+        }
+
+    private fun buildConfig(account: WarpAccount): Config {
+        val iface = Interface.Builder()
+            .parsePrivateKey(account.privateKey)
+            .parseAddresses("${account.addressV4}/32, ${account.addressV6}/128")
+            .parseDnsServers("1.1.1.1, 1.0.0.1")
+            .parseMtu("1280")
+            .build()
+
+        val peer = Peer.Builder()
+            .setPublicKey(Key.fromBase64(account.peerPublicKey))
+            .parseEndpoint(account.endpoint)
+            .parseAllowedIPs("0.0.0.0/0, ::/0")
+            .parsePersistentKeepalive("25")
+            .build()
+
+        return Config.Builder()
+            .setInterface(iface)
+            .addPeer(peer)
+            .build()
+    }
+}
