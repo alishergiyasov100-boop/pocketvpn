@@ -58,6 +58,8 @@ class VpnViewModel(app: Application) : AndroidViewModel(app) {
     private val _customUrl = MutableStateFlow("")
     val customUrl: StateFlow<String> = _customUrl.asStateFlow()
 
+    val singBoxLogs: StateFlow<List<String>> = singBoxEngine.logs
+
     val killSwitch = settings.killSwitch
     val autoConnect = settings.autoConnect
 

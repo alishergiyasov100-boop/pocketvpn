@@ -26,6 +26,9 @@ class SingBoxEngine(private val context: Context) {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _logs = MutableStateFlow<List<String>>(emptyList())
+    val logs: StateFlow<List<String>> = _logs.asStateFlow()
+
     private val pollScope = CoroutineScope(Dispatchers.Default)
 
     init {
@@ -41,6 +44,7 @@ class SingBoxEngine(private val context: Context) {
                     else -> VpnState.Disconnected
                 }
                 _error.value = err
+                _logs.value = SingBoxService.snapshotLogs()
                 delay(500)
             }
         }

@@ -21,11 +21,15 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Menu
@@ -49,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,6 +70,7 @@ fun MainScreen(vm: VpnViewModel) {
     val speed by vm.speedMbps.collectAsState()
     val speedTesting by vm.speedTesting.collectAsState()
     val backend by vm.backend.collectAsState()
+    val singBoxLogs by vm.singBoxLogs.collectAsState()
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -126,6 +132,13 @@ fun MainScreen(vm: VpnViewModel) {
                         )
                         Spacer(modifier = Modifier.height(32.dp))
                         StateLabel(state = state, bootstrap = bootstrap)
+                        if (backend == Backend.Custom &&
+                            (state == VpnState.Error || state == VpnState.Connecting) &&
+                            singBoxLogs.isNotEmpty()
+                        ) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            LogPanel(lines = singBoxLogs)
+                        }
                         if (state == VpnState.Connected) {
                             Spacer(modifier = Modifier.height(20.dp))
                             SpeedLabel(
@@ -234,6 +247,33 @@ private fun SpeedLabel(mbps: Double?, running: Boolean, onTap: () -> Unit) {
         fontSize = 14.sp,
         letterSpacing = 0.3.sp
     )
+}
+
+@Composable
+private fun LogPanel(lines: List<String>) {
+    val scrollState = rememberScrollState()
+    val tail = lines.takeLast(20)
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 24.dp)
+            .widthIn(max = 360.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(12.dp)
+            .heightIn(max = 180.dp)
+    ) {
+        Column(modifier = Modifier.verticalScroll(scrollState)) {
+            tail.forEach { line ->
+                Text(
+                    text = line,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 10.sp,
+                    lineHeight = 13.sp
+                )
+            }
+        }
+    }
 }
 
 @Composable

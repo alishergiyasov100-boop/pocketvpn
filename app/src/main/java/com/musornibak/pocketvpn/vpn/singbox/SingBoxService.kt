@@ -56,6 +56,19 @@ class SingBoxService : VpnService(), PlatformInterface {
             private set
         @Volatile var lastError: String? = null
             private set
+
+        // Ring buffer of recent sing-box debug lines, surfaced as "Details" when
+        // a connect attempt fails — without this we'd be flying blind in the UI.
+        private const val LOG_CAP = 60
+        private val logBuf = ArrayDeque<String>()
+        private val logLock = Any()
+        fun appendLog(line: String) {
+            synchronized(logLock) {
+                if (logBuf.size >= LOG_CAP) logBuf.removeFirst()
+                logBuf.addLast(line)
+            }
+        }
+        fun snapshotLogs(): List<String> = synchronized(logLock) { logBuf.toList() }
     }
 
     private var commandServer: CommandServer? = null
@@ -77,17 +90,29 @@ class SingBoxService : VpnService(), PlatformInterface {
                 val config = intent?.getStringExtra(EXTRA_CONFIG)
                 if (config.isNullOrBlank()) {
                     lastError = "Empty config"
+                    appendLog("ERROR: empty config")
                     stopSelf()
                     return START_NOT_STICKY
                 }
-                startForeground(NOTIFICATION_ID, buildNotification("Connecting…"))
+                try {
+                    startForegroundCompat()
+                } catch (t: Throwable) {
+                    Log.e(TAG, "startForeground failed", t)
+                    appendLog("ERROR: foreground service: ${t.message}")
+                    lastError = "Foreground service: ${t.message}"
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
                 try {
                     startSingBox(config)
                     running = true
                     lastError = null
+                    appendLog("sing-box service started ok")
                     updateNotification("Protected")
                 } catch (t: Throwable) {
                     Log.e(TAG, "start failed", t)
+                    appendLog("ERROR: ${t.javaClass.simpleName}: ${t.message}")
+                    t.stackTrace.take(4).forEach { appendLog("  at $it") }
                     lastError = t.message ?: "sing-box start failed"
                     running = false
                     stopSelf()
@@ -119,14 +144,39 @@ class SingBoxService : VpnService(), PlatformInterface {
             tempPath = tmp.absolutePath
             fixAndroidStack = true
             commandServerListenPort = 0
-            debug = false
+            debug = true
         }
         Libbox.setup(setupOpts)
+        appendLog("libbox version: ${runCatching { Libbox.version() }.getOrDefault("?")}")
 
-        val server = CommandServer(SilentCommandServerHandler(), this)
+        try {
+            Libbox.checkConfig(configJson)
+            appendLog("config validated")
+        } catch (t: Throwable) {
+            appendLog("ERROR: config invalid: ${t.message}")
+            throw IllegalStateException("Config check failed: ${t.message}", t)
+        }
+
+        val server = CommandServer(VerboseCommandServerHandler(), this)
         server.start()
+        appendLog("CommandServer started")
         server.startOrReloadService(configJson, OverrideOptions())
+        appendLog("startOrReloadService returned")
         commandServer = server
+    }
+
+    private fun startForegroundCompat() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            // Android 14+ requires explicit foregroundServiceType on startForeground;
+            // VPN's "specialUse" type is the safe choice here.
+            startForeground(
+                NOTIFICATION_ID,
+                buildNotification("Connecting…"),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, buildNotification("Connecting…"))
+        }
     }
 
     private fun stopSingBox() {
@@ -141,6 +191,7 @@ class SingBoxService : VpnService(), PlatformInterface {
     // --- PlatformInterface ---------------------------------------------------
 
     override fun openTun(options: TunOptions): Int {
+        appendLog("openTun called: mtu=${options.mtu}")
         val builder = Builder()
             .setSession("PocketVPN")
             .setMtu(options.mtu.takeIf { it > 0 } ?: 1500)
@@ -184,9 +235,14 @@ class SingBoxService : VpnService(), PlatformInterface {
         runCatching { builder.addDisallowedApplication(packageName) }
 
         val pfd = builder.establish()
-            ?: throw IllegalStateException("VpnService.Builder.establish() returned null")
+            ?: run {
+                appendLog("ERROR: VpnService.Builder.establish() returned null — VPN permission missing or another VPN active")
+                throw IllegalStateException("VpnService.Builder.establish() returned null")
+            }
         tunPfd = pfd
-        return pfd.detachFd()
+        val fd = pfd.detachFd()
+        appendLog("tun fd opened: $fd")
+        return fd
     }
 
     override fun autoDetectInterfaceControl(fd: Int) {
@@ -279,7 +335,7 @@ class SingBoxService : VpnService(), PlatformInterface {
         mgr.notify(NOTIFICATION_ID, buildNotification(text))
     }
 
-    private class SilentCommandServerHandler : CommandServerHandler {
+    private class VerboseCommandServerHandler : CommandServerHandler {
         override fun getSystemProxyStatus(): SystemProxyStatus {
             return SystemProxyStatus().apply {
                 available = false
@@ -290,7 +346,10 @@ class SingBoxService : VpnService(), PlatformInterface {
         override fun serviceStop() {}
         override fun setSystemProxyEnabled(enabled: Boolean) {}
         override fun writeDebugMessage(message: String?) {
-            if (message != null) Log.d(TAG, message)
+            if (message != null) {
+                Log.d(TAG, message)
+                appendLog(message.take(180))
+            }
         }
     }
 }
