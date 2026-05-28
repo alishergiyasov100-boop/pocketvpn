@@ -1,10 +1,6 @@
 package com.musornibak.pocketvpn.vpn
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import com.musornibak.pocketvpn.data.Region
 import com.musornibak.pocketvpn.data.Regions
 import com.musornibak.pocketvpn.data.VpnState
@@ -14,29 +10,26 @@ import com.wireguard.config.Config
 import com.wireguard.config.Interface
 import com.wireguard.config.Peer
 import com.wireguard.crypto.Key
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
  * Owns the wireguard-go tunnel. Ensures an anonymous Cloudflare WARP account
  * exists, then brings the tunnel UP/DOWN through GoBackend.
  *
- * v0.3.0 adds:
- *   - per-region endpoint override (different WARP IP:port biases routing PoP)
- *   - underlying-network change detection → automatic tunnel rebuild
+ * v0.3.0 added per-region endpoint override (different WARP IP:port biases
+ * routing PoP). The network-change watcher introduced in v0.3.0 was removed
+ * in v0.3.1 — it raced with WireGuard's own roaming code and silently broke
+ * traffic. WG already handles Wi-Fi↔mobile via persistent-keepalive=25.
  */
 class WarpEngine(private val context: Context) {
 
     private val backend = GoBackend(context.applicationContext)
     private val store = WarpStore(context.applicationContext)
     private val client = WarpClient()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _state = MutableStateFlow(VpnState.Disconnected)
     val state: StateFlow<VpnState> = _state.asStateFlow()
@@ -54,8 +47,6 @@ class WarpEngine(private val context: Context) {
 
     private var cachedConfig: Config? = null
     private var currentRegion: Region = Regions.WARP_AUTO
-    private var lastUnderlyingNetworkId: Long = -1L
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     fun setRegion(region: Region) {
         if (region.code == currentRegion.code) return
@@ -75,12 +66,10 @@ class WarpEngine(private val context: Context) {
         withContext(Dispatchers.IO) {
             backend.setState(tunnel, Tunnel.State.UP, config)
         }
-        registerNetworkWatcher()
         _state.value = VpnState.Connected
     }
 
     fun disconnect() {
-        unregisterNetworkWatcher()
         runCatching { backend.setState(tunnel, Tunnel.State.DOWN, null) }
         _state.value = VpnState.Disconnected
     }
@@ -112,49 +101,5 @@ class WarpEngine(private val context: Context) {
             .setInterface(iface)
             .addPeer(peer)
             .build()
-    }
-
-    private fun registerNetworkWatcher() {
-        if (networkCallback != null) return
-        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-            .build()
-        val cb = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                val id = network.networkHandle
-                if (lastUnderlyingNetworkId != -1L && id != lastUnderlyingNetworkId) {
-                    scope.launch { rebuild() }
-                }
-                lastUnderlyingNetworkId = id
-            }
-
-            override fun onLost(network: Network) {
-                if (network.networkHandle == lastUnderlyingNetworkId) {
-                    lastUnderlyingNetworkId = -1L
-                }
-            }
-        }
-        runCatching { cm.registerNetworkCallback(request, cb) }
-            .onSuccess { networkCallback = cb }
-    }
-
-    private fun unregisterNetworkWatcher() {
-        val cb = networkCallback ?: return
-        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return
-        runCatching { cm.unregisterNetworkCallback(cb) }
-        networkCallback = null
-        lastUnderlyingNetworkId = -1L
-    }
-
-    private suspend fun rebuild() {
-        if (_state.value != VpnState.Connected) return
-        runCatching {
-            backend.setState(tunnel, Tunnel.State.DOWN, null)
-            val account = ensureAccount()
-            val config = cachedConfig ?: buildConfig(account, currentRegion).also { cachedConfig = it }
-            backend.setState(tunnel, Tunnel.State.UP, config)
-        }
     }
 }
