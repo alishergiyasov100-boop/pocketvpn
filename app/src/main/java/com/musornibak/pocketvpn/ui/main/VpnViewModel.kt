@@ -10,6 +10,7 @@ import com.musornibak.pocketvpn.data.VpnState
 import com.musornibak.pocketvpn.vpn.SpeedTester
 import com.musornibak.pocketvpn.vpn.WarpEngine
 import com.musornibak.pocketvpn.vpn.singbox.SingBoxEngine
+import com.musornibak.pocketvpn.vpn.singbox.SingBoxService
 import com.musornibak.pocketvpn.vpn.singbox.VlessParser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -101,15 +102,24 @@ class VpnViewModel(app: Application) : AndroidViewModel(app) {
                     Backend.Warp -> warpEngine.connect(_region.value)
                     Backend.Custom -> {
                         val url = _customUrl.value.trim()
-                        if (url.isEmpty()) throw IllegalStateException("Paste a vless:// URL first")
-                        val cfg = VlessParser.toSingBoxConfig(url)
+                        if (url.isEmpty()) throw IllegalStateException("Paste a vless:// URL first (open drawer)")
+                        SingBoxService.appendLog("connect: parsing vless URL (${url.length} chars)")
+                        val cfg = try {
+                            VlessParser.toSingBoxConfig(url)
+                        } catch (t: Throwable) {
+                            SingBoxService.appendLog("ERROR: parse failed: ${t.message}")
+                            throw IllegalStateException("Bad VLESS URL: ${t.message}", t)
+                        }
+                        SingBoxService.appendLog("connect: config built (${cfg.length} bytes), starting service…")
                         singBoxEngine.start(cfg)
                     }
                 }
                 _bootstrap.value = 100
                 _error.value = null
             } catch (t: Throwable) {
-                _error.value = t.message ?: "Connection failed"
+                val msg = t.message ?: "Connection failed"
+                SingBoxService.appendLog("ERROR: $msg")
+                _error.value = msg
                 _bootstrap.value = 0
             }
         }

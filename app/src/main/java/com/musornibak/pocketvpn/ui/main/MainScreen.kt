@@ -71,6 +71,8 @@ fun MainScreen(vm: VpnViewModel) {
     val speedTesting by vm.speedTesting.collectAsState()
     val backend by vm.backend.collectAsState()
     val singBoxLogs by vm.singBoxLogs.collectAsState()
+    val error by vm.error.collectAsState()
+    val customUrl by vm.customUrl.collectAsState()
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -132,8 +134,25 @@ fun MainScreen(vm: VpnViewModel) {
                         )
                         Spacer(modifier = Modifier.height(32.dp))
                         StateLabel(state = state, bootstrap = bootstrap)
+                        if (backend == Backend.Custom && customUrl.isBlank()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Open drawer → paste vless:// URL",
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                fontSize = 13.sp
+                            )
+                        }
+                        if (backend == Backend.Custom && error != null && state != VpnState.Connected) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = error.orEmpty(),
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(horizontal = 24.dp)
+                            )
+                        }
                         if (backend == Backend.Custom &&
-                            (state == VpnState.Error || state == VpnState.Connecting) &&
+                            state != VpnState.Connected &&
                             singBoxLogs.isNotEmpty()
                         ) {
                             Spacer(modifier = Modifier.height(16.dp))
