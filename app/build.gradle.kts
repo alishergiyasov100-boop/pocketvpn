@@ -74,6 +74,9 @@ dependencies {
 
     implementation(libs.wireguard.tunnel)
     implementation(libs.okhttp)
+    // sing-box core (Go-built via gomobile, ~92MB AAR bundles arm64+x86_64 .so).
+    // Enables VLESS/Trojan/Reality/Hysteria2 protocols for DPI bypass.
+    implementation("com.github.singbox-android:libbox:1.13.12")
 
     debugImplementation(libs.androidx.ui.tooling)
 }
