@@ -64,6 +64,7 @@ fun MainScreen(vm: VpnViewModel) {
     val bootstrap by vm.bootstrap.collectAsState()
     val speed by vm.speedMbps.collectAsState()
     val speedTesting by vm.speedTesting.collectAsState()
+    val backend by vm.backend.collectAsState()
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -136,11 +137,19 @@ fun MainScreen(vm: VpnViewModel) {
                     }
                 }
 
-                RegionPill(
-                    flag = region.flag,
-                    name = region.name,
-                    onClick = { showRegionPicker = true }
-                )
+                if (backend == Backend.Warp) {
+                    RegionPill(
+                        flag = region.flag,
+                        name = region.name,
+                        onClick = { showRegionPicker = true }
+                    )
+                } else {
+                    RegionPill(
+                        flag = "\uD83D\uDD12",
+                        name = "Custom (VLESS / Reality)",
+                        onClick = { /* drawer is where the URL is pasted */ }
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
             }

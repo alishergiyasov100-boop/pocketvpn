@@ -19,6 +19,8 @@ class SettingsRepo(private val context: Context) {
     private val BRIDGE = booleanPreferencesKey("bridge_mode")
     private val BRIDGE_WIFI_ONLY = booleanPreferencesKey("bridge_wifi_only")
     private val BRIDGE_BATTERY_GUARD = booleanPreferencesKey("bridge_battery_guard")
+    private val BACKEND = stringPreferencesKey("backend")
+    private val CUSTOM_URL = stringPreferencesKey("custom_vless_url")
 
     val regionCode: Flow<String> = context.dataStore.data.map { it[REGION] ?: "auto" }
     val conflux: Flow<Boolean> = context.dataStore.data.map { it[CONFLUX] ?: true }
@@ -28,6 +30,8 @@ class SettingsRepo(private val context: Context) {
     val bridgeMode: Flow<Boolean> = context.dataStore.data.map { it[BRIDGE] ?: false }
     val bridgeWifiOnly: Flow<Boolean> = context.dataStore.data.map { it[BRIDGE_WIFI_ONLY] ?: true }
     val bridgeBatteryGuard: Flow<Boolean> = context.dataStore.data.map { it[BRIDGE_BATTERY_GUARD] ?: true }
+    val backend: Flow<String> = context.dataStore.data.map { it[BACKEND] ?: "warp" }
+    val customUrl: Flow<String> = context.dataStore.data.map { it[CUSTOM_URL] ?: "" }
 
     suspend fun setRegion(code: String) = context.dataStore.edit { it[REGION] = code }
     suspend fun setConflux(v: Boolean) = context.dataStore.edit { it[CONFLUX] = v }
@@ -37,4 +41,6 @@ class SettingsRepo(private val context: Context) {
     suspend fun setBridge(v: Boolean) = context.dataStore.edit { it[BRIDGE] = v }
     suspend fun setBridgeWifiOnly(v: Boolean) = context.dataStore.edit { it[BRIDGE_WIFI_ONLY] = v }
     suspend fun setBridgeBatteryGuard(v: Boolean) = context.dataStore.edit { it[BRIDGE_BATTERY_GUARD] = v }
+    suspend fun setBackend(v: String) = context.dataStore.edit { it[BACKEND] = v }
+    suspend fun setCustomUrl(v: String) = context.dataStore.edit { it[CUSTOM_URL] = v }
 }

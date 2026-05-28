@@ -9,11 +9,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,12 +25,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.musornibak.pocketvpn.ui.main.Backend
 import com.musornibak.pocketvpn.ui.main.VpnViewModel
 
 @Composable
 fun AppDrawer(vm: VpnViewModel) {
     val killSwitch by vm.killSwitch.collectAsState(initial = false)
     val autoConnect by vm.autoConnect.collectAsState(initial = false)
+    val backend by vm.backend.collectAsState()
+    val customUrl by vm.customUrl.collectAsState()
 
     Column(
         modifier = Modifier
@@ -50,6 +56,52 @@ fun AppDrawer(vm: VpnViewModel) {
         )
 
         Spacer(modifier = Modifier.height(20.dp))
+        Section("Backend")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = backend == Backend.Warp,
+                onClick = { vm.setBackend(Backend.Warp) },
+                label = { Text("WARP") }
+            )
+            FilterChip(
+                selected = backend == Backend.Custom,
+                onClick = { vm.setBackend(Backend.Custom) },
+                label = { Text("Custom (VLESS)") }
+            )
+        }
+        Text(
+            "WARP works in most countries.  In Uzbekistan / Iran / Russia it's blocked by DPI — paste your own vless://… URL with Reality and switch to Custom.",
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 11.sp,
+            letterSpacing = 0.2.sp
+        )
+
+        if (backend == Backend.Custom) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = customUrl,
+                onValueChange = { vm.setCustomUrl(it) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                label = { Text("vless:// URL") },
+                placeholder = { Text("vless://uuid@host:443?security=reality&pbk=…") },
+                singleLine = false,
+                maxLines = 3,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
         Section("Protection")
         ToggleRow(
             "Kill switch",
@@ -68,13 +120,13 @@ fun AppDrawer(vm: VpnViewModel) {
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            "v0.3.0 · WireGuard + Cloudflare WARP",
+            "v0.4.0 · WireGuard+WARP & sing-box (VLESS / Reality)",
             modifier = Modifier.padding(horizontal = 24.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp
         )
         Text(
-            "11 regions · in-tunnel speed test · auto-reconnect · always-on",
+            "DPI bypass for UZ · 11 WARP regions · in-tunnel speed test",
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp
