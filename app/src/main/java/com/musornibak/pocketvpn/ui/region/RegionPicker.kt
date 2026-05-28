@@ -93,13 +93,14 @@ fun RegionPicker(
                         items(Regions.OPTIONS, key = { it.code }) { r ->
                             RegionRow(r, r.code == selected.code) { onPick(r) }
                         }
-                        item { Spacer(modifier = Modifier.height(24.dp)) }
+                        item { Spacer(modifier = Modifier.height(20.dp)) }
                         item {
                             Text(
-                                "More backends in v0.3.0 — custom WireGuard config import, ProtonVPN free, country pinning.",
+                                "Cities bias routing toward a specific Cloudflare PoP. " +
+                                    "Anycast can still reroute under load — that's why it's free.",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(horizontal = 24.dp)
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                             )
                         }
                     }

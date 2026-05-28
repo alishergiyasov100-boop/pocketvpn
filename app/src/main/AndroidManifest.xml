@@ -30,8 +30,23 @@
         </activity>
 
         <!--
-            The wireguard-android tunnel library merges its own
-            GoBackend$VpnService declaration into our manifest.
+            wireguard-android merges its own GoBackend$VpnService declaration
+            into our manifest. We re-declare it here purely to attach the
+            always-on meta-data flag (Android 8+ uses this to expose the app
+            in Settings → Network → Advanced → VPN as "Always-on capable").
         -->
+        <service
+            android:name="com.wireguard.android.backend.GoBackend$VpnService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="false"
+            tools:node="merge">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON"
+                android:value="true" />
+        </service>
+
     </application>
 </manifest>

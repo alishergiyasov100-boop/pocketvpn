@@ -62,6 +62,8 @@ fun MainScreen(vm: VpnViewModel) {
     val state by vm.state.collectAsState()
     val region by vm.region.collectAsState()
     val bootstrap by vm.bootstrap.collectAsState()
+    val speed by vm.speedMbps.collectAsState()
+    val speedTesting by vm.speedTesting.collectAsState()
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -123,6 +125,14 @@ fun MainScreen(vm: VpnViewModel) {
                         )
                         Spacer(modifier = Modifier.height(32.dp))
                         StateLabel(state = state, bootstrap = bootstrap)
+                        if (state == VpnState.Connected) {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            SpeedLabel(
+                                mbps = speed,
+                                running = speedTesting,
+                                onTap = { vm.runSpeedTest() }
+                            )
+                        }
                     }
                 }
 
@@ -195,6 +205,26 @@ private fun StateLabel(state: VpnState, bootstrap: Int) {
             letterSpacing = 0.5.sp
         )
     }
+}
+
+@Composable
+private fun SpeedLabel(mbps: Double?, running: Boolean, onTap: () -> Unit) {
+    val text = when {
+        running -> "Measuring…"
+        mbps != null -> "↓ ${"%.1f".format(mbps)} Mbps"
+        else -> "Tap to test speed"
+    }
+    Text(
+        text = text,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onTap)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.sp,
+        letterSpacing = 0.3.sp
+    )
 }
 
 @Composable

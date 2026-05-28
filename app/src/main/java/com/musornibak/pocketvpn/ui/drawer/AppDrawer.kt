@@ -68,13 +68,13 @@ fun AppDrawer(vm: VpnViewModel) {
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            "v0.2.0 · WireGuard + Cloudflare WARP",
+            "v0.3.0 · WireGuard + Cloudflare WARP",
             modifier = Modifier.padding(horizontal = 24.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp
         )
         Text(
-            "anonymous registration, no email · ~50 Mbps typical",
+            "11 regions · in-tunnel speed test · auto-reconnect · always-on",
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp
